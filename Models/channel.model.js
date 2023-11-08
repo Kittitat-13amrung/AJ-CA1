@@ -10,6 +10,7 @@ const channelSchema = new Schema({
     videos: [{ type: Schema.Types.ObjectId, ref: 'Video' }],
     about: { type: String },
     avatar: { type: String, default: faker.image.avatar()},
+    roles: [{ type: String, default: 'user', }]
 }, {
     timestamps: true
 });

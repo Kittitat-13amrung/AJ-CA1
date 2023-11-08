@@ -4,17 +4,17 @@ const {
     register,
     login,
     loginRequired,
-    profile,
+    show,
     update
 } = require('../Controllers/channels.controller');
 
 
 
 router
-    .get('/', profile)
+    // .get('/', show)
     .post('/register', register)
     .post('/login', login)
-    .get('/profile/', loginRequired, profile)
-    .post('/profile/:id/update', loginRequired, update)
+    .get('/:id', show)
+    .put('/:id/update', loginRequired, update)
 
 module.exports = router;

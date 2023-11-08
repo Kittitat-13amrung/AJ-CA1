@@ -1,14 +1,18 @@
 const Video = require("../Models/video.model");
 const Comment = require("../Models/comment.model");
 const Channel = require("../Models/channel.model");
-const fs = require('fs');
+const deleteImage = require('../config/ImageDelete');
 
+// Get all videos
 const index = (req, res) => {
+    // pagination and related queries
 	const commentLimit = req.query.comment_limit | 10;
 	const perPage = req.query.limit | 10;
 	const page = req.query.page | 0;
 
+    // find all videos in DB
 	Video.find()
+        // connect and populate relationships
 		.populate([
 			{
 				path: "channel",
@@ -18,20 +22,20 @@ const index = (req, res) => {
 				limit: commentLimit,
 			},
 		])
+        // limit amount of data shown 
+        // by adding pagination
 		.limit(perPage)
 		.skip(perPage * page)
-		.then(async (data) => {
-			console.log(data);
-
-			let countVideo = await Video.countDocuments({});
-
-			console.log(countVideo);
-
-			if (data.length > 0) {
+		.then(async (videos) => {
+            // get length of video array and use it for pagination numbering
+			let videosLength = Math.max(videos.length, 10);
+            // if collection contains documents
+            // returns 200 status
+			if (videos.length > 0) {
 				res.status(200).json({
 					page: page,
-					pages: Math.floor(countVideo / perPage),
-					data,
+					pages: Math.floor(videosLength / perPage),
+					videos,
 				});
 			} else {
 				res.status(404).json({
@@ -45,27 +49,34 @@ const index = (req, res) => {
 		});
 };
 
+// Show Video By Id
 const show = (req, res) => {
 	const id = req.params.id;
 
+    // query
 	const commentLimit = req.query.comment_limit | 10;
 
+    // find video from id
 	Video.findById(id)
+        // connect and populate relationships
 		.populate([
 			{
 				path: "channel",
 			},
 			{
 				path: "comments",
-				limit: commentLimit,
+                select: "-_video_id", // deselect _video_id
+				limit: commentLimit, // limit amount of comments shown
 			},
 		])
 		.then((video) => {
+            // if video doesn't exist return 404
 			if (!video)
 				res.status(404).json({
 					message: `Video ${id} not found!`,
 				});
 
+            // return video
 			res.status(200).json(video);
 		})
 		.catch((err) => {
@@ -81,48 +92,52 @@ const show = (req, res) => {
 		});
 };
 
+// Create Video
 const create = async (req, res) => {
 	let form = req.body;
 
-	// form.channel = ;
+    // remove immutable data from form
+    const { _id, channel, views, comments, likes, dislikes, duration, createdAt, updatedAt } = form;
 
 	if (req.file) {
+        // assign thumbnail property to request file
 		form.thumbnail = req.file.filename;
 	}
-	// include the following else if image is required
+	// if error occurs, delete stored image
 	else {
-		fs.unlink(`./public/uploads/${req.file.filename}`, (err) => {
-			if (err) {
-				return console.error(err);
-			}
-
-			return "Successfully deleted the image";
-		});
+        deleteImage(req.file.filename);
 
 		res.status(422).json({
 			message: "Image not uploaded!",
 		});
 	}
 
-	Channel.findOne({ email: req.channel.email })
-		.then((channel) => {
-			form.channel = channel._id;
+    // check if channel exists
+	Channel.exists({ _id: req.channel._id })
+		.then((channelId) => {
+            // assign channel property to channel id
+			form.channel = channelId;
 
+            // create video doc
 			Video.create(form)
-				.then((data) => {
-					console.log(`New Video Created`, data);
+				.then((newVideo) => {
+					console.log(`New Video Created`, newVideo);
+                    // push video id into channel doc
+                    Channel.findByIdAndUpdate(channelId, {
+                        $push: {
+                            videos: newVideo._id
+                        }
+                    }).then(() => {
+                        // successful, returns created video
+                        res.status(201).json(newVideo);
+                    }).catch(err => {
+                        res.status(500).json(err);
+                    })
 
-					res.status(201).json(data);
 				})
 				.catch((err) => {
 					if (err.name === "ValidationError") {
-						fs.unlink(`./public/uploads/${req.file.filename}`, (err) => {
-							if (err) {
-								return console.error(err);
-							}
-
-							return "Successfully deleted the image";
-						});
+						deleteImage(req.file.filename)
 
 						res.status(422).json({
 							errors: err.errors,
@@ -138,44 +153,92 @@ const create = async (req, res) => {
 };
 
 const update = (req, res) => {
+    // assign id, form from request params
 	const id = req.params.id;
-	const data = req.body;
+	const form = req.body;
+
+    // remove immutable data from form
+    const { _id, channel, views, comments, likes, dislikes, duration, createdAt, updatedAt } = form;
 
 	//connect to model and retrieve video with specified id
-	Video.findByIdAndUpdate(id, data, {
+	Video.findByIdAndUpdate(id, form, {
 		new: true,
 	})
-		.then((updatedData) => {
-			res.status(201).json(updatedData);
-		})
-		.catch((err) => {
-			if (err.name === "ValidationError") {
-				res.status(422).json({
-					errors: err.errors,
-				});
-			} else if (err.name === "CastError") {
-				console.error(err);
+    // return updated video
+    .then((updatedData) => {
+        res.status(201).json(updatedData);
+    })
+    // catch errors and display
+    .catch((err) => {
+        if (err.name === "ValidationError") {
+            res.status(422).json({
+                errors: err.errors,
+            });
+        } else if (err.name === "CastError") {
+            console.error(err);
 
-				res.status(404).json({
-					message: `Video`,
-				});
-			}
-		});
+            res.status(404).json({
+                message: `Video`,
+            });
+        }
+    });
 };
 
+// Delete Video
 const destroy = (req, res) => {
+    // assign id from request parameter called 'id'
 	let id = req.params.id;
 
 	Video.findByIdAndDelete(id)
-		.then((data) => {
-			if (!data) {
+		.then((newVideo) => {
+            // return if the video cannot be found
+			if (!newVideo) {
 				res.status(404).json({
 					message: `Video ${id} not found!`,
 				});
 			} else {
-				res.status(200).json({
-					message: `You deleted festival with ID: ${id}`,
-				});
+                // find and remove video id from the channel doc
+				Channel.findByIdAndUpdate(id, {
+                    $pull: {
+                        videos: newVideo._id
+                    }
+                })
+                .then(async(channel) => {
+                    // returns if channel cannot be found
+                    if(!channel) {
+                        return res.status(404).json({
+                            message: 'Channel does not exist!'
+                        });
+                    }
+
+                    // delete existing comments 
+                    // or return 200 response
+                    await Comment.deleteMany({ _video_id: id })
+                    .then((comments) => {  
+                        // if doesn't exist, just return with 200
+                        if(!comments) {
+                            res.status(200).json({
+                                message: `You have successfully deleted the video with ID: ${id}`,
+                            });
+                        }
+
+                        // if exists, response with suitable msg
+                        res.status(200).json({
+                            message: `You have successfully deleted the video with ID ${id} along with its comments`,
+                        });
+                    })
+                    // console logging and response with errors
+                    .catch(err => {
+                        console.error(err);
+
+                        res.status(500).json(err);
+                    });
+
+
+                })
+                .catch(err => {
+                    res.status(500).json(err)
+                })
 			}
 		})
 		.catch((err) => {

@@ -8,8 +8,6 @@ const register = (req, res) => {
 
     newChannel.password = bcrypt.hashSync(req.body.password, 10);
 
-    console.log(newChannel);
-
     let err = newChannel.validateSync();
 
     if(err) {
@@ -33,8 +31,6 @@ const register = (req, res) => {
 
 const login = (req, res) => {
         const credential = req.body;
-
-        console.log(credential);
 
         Channel.findOne({ email: credential.email })
         .then(channel => {
@@ -68,10 +64,11 @@ const loginRequired = (req, res, next) => {
     return res.status(401).json({msg: 'Unauthorised channel!'});
 }
 
-const profile = (req, res) => {
+const show = (req, res) => {
     Channel.findOne({ _id: req.params.id }).populate([
         {
             path: 'videos',
+            select: '_id title url tag thumbnail duration createdAt views',
         }
     ])
     .then(channel => {
@@ -81,47 +78,55 @@ const profile = (req, res) => {
             });
         }
 
+        channel.password = undefined;
+
         return res.status(200).json(channel)
     })
 };
 
 const update = (req, res) => {
     let form = req.body;
+    const id = req.params.id;
+
+    console.log(id)
 
     if(req.file) {
         form.thumbnail = req.file.filename;
     }
-    // include the following else if image is required
-    else {
-        return res.status(422).json({
-            message: 'Image not uploaded!'
+
+    Channel.exists({ _id: id })
+    .then(channelId => {
+        Channel.findByIdAndUpdate(channelId, form)
+        .then(updatedData => {
+            console.log(`Channel has been updated`, updatedData);
+
+            res.status(201).json(updatedData)
         })
-    }
+        .catch(err => {
+            if(err.name === 'ValidationError') {
+                res.status(422).json({
+                    errors: err.errors
+                });
+            } else {
+                console.error(err);
 
-
-    Channel.findByIdAndUpdate({ _id : res.params.id }, form)
-    .then(updatedData => {
-        console.log(`Channel has been updated`, data);
-
-        res.status(201).json(updatedData)
+                res.status(500).json(err)
+            };
+        });
     })
     .catch(err => {
-        if(err.name === 'ValidationError') {
-            res.status(422).json({
-                errors: err.errors
-            });
-        } else {
-            console.error(err);
-
-            res.status(500).json(err)
-        };
-    });
+        console.error(err);
+    })
 };
+
+// const destroy = (req, res) => {
+//     const id = req.
+// }
 
 module.exports = {
     register,
     login,
     loginRequired,
-    profile,
+    show,
     update
 }
