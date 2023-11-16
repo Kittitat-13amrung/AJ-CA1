@@ -25,18 +25,24 @@ const connect = async () => {
     console.log('seeding the database');
     // await loadData(227);
 
-    const videos = await Video.find();
+    const channels = await Channel.find();
 
-    for(const video of videos) {
-        const updateVid = await Video.findOneAndUpdate({ _id: video._id }, {
-            createdAt: faker.date.past({ year: 10 }),
+    for(const channel of channels) {
+        const isAdmin = (channel.email === "n00201327@iadt.ie") ? ['admin', 'user'] : ['user'];
+
+        const updatedChannel = await Channel.findOneAndUpdate({ _id: channel._id }, {
+            $push: {
+                roles: {
+                    $each: isAdmin
+                }
+            }
         }, {
             strict: false,
             new: true,
             timestamps: false,
-        })
+        });
         
-        console.log(updateVid.createdAt)
+        console.log(updatedChannel.roles)
     }
 
     // console.log(result)
