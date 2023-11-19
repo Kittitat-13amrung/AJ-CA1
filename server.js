@@ -29,7 +29,9 @@ const options = {
 
 // serve swagger doc
 const swaggerSpec = swaggerJsDoc(options);
-app.use("/", express.static('node_modules/swagger-ui-dist/', {index: false}), swaggerUi.serve);
+app.get("/swagger-ui-bundle.js", express.static(__dirname + "/swaggers/swagger-ui-bundle.js"));
+app.get("/swagger-ui-standalone-presets.js", express.static(__dirname + "/swaggers/swagger-ui-standalone-preset.js"))
+app.use("/", swaggerUi.serve);
 app.get("/", swaggerUi.setup(swaggerSpec, {
     customCssUrl:
     'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css',
