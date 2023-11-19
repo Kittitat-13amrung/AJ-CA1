@@ -6,7 +6,7 @@ This Contionous Assessment is part of my Advanced JavaScript assignment to devel
 
 In order to utilise my API to its utmost capacibilities. I have documented the basics API calls using [Swagger UI](https://swagger.io/tools/swagger-ui/) and examples of the resulting data you could expect when fetching through my API. 
 
-### **You can access an online version of this assignment on: https://aj-ca-1.vercel.app/#/comments/get_api_comments ** ###
+### **You can access an online version of this assignment on: https://aj-ca-1.vercel.app/ ** ###
 
 **But in order to access the documentation itself** you must use: 
 
