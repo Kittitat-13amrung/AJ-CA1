@@ -1,16 +1,18 @@
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
+const cors = require('cors');
 require('dotenv').config();
 require('./config/db')();
 const jwt = require('jsonwebtoken');
+const ROOT_FOLDER = path.join(__dirname, '..');
 
 // create an Express instance
 const app = express();
 const port = 3000;
 
 app.use(express.json());
-
+app.use(cors());
 // app.set('view engine', 'html');
 // app.use(express.static(__dirname + '/views/'));
 
@@ -24,11 +26,16 @@ const options = {
       },
     },
     apis: ['./Controllers/*.controller.js'],
+    customCssUrl: '/public/swagger-ui.css',
+    customSiteTitle: "The Words That I Know API - Swagger"
   };
 
 // serve swagger doc
 const swaggerSpec = swaggerJsDoc(options);
-app.use('/document', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+app.use('/', swaggerUi.serve);
+app.get('/', swaggerUi.setup(swaggerSpec))
+
+app.use('/public', express.static(path.join(ROOT_FOLDER, 'public')));
 
 // login middleware
 app.use((req, res, next) => {
