@@ -17,6 +17,8 @@ app.use(cors());
 
 const options = {
     failOnErrors: true, // Whether or not to throw when parsing errors. Defaults to false.
+    customCssUrl: 'https://cdn.jsdelivr.net/npm/swagger-ui-themes@3.0.0/themes/3.x/theme-newspaper.css',
+    customSiteTitle: "AJ CA1",
     definition: {
       openapi: '3.0.0',
       info: {
@@ -25,8 +27,6 @@ const options = {
       },
     },
     apis: ['./Controllers/*.controller.js'],
-    customCssUrl: '/public/swagger-ui.css',
-    customSiteTitle: "AJ CA1"
   };
 
 // serve swagger doc
