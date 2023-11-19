@@ -5,7 +5,6 @@ const cors = require('cors');
 require('dotenv').config();
 require('./config/db')();
 const jwt = require('jsonwebtoken');
-const ROOT_FOLDER = path.join(__dirname, '..');
 
 // create an Express instance
 const app = express();
@@ -27,7 +26,7 @@ const options = {
     },
     apis: ['./Controllers/*.controller.js'],
     customCssUrl: '/public/swagger-ui.css',
-    customSiteTitle: "The Words That I Know API - Swagger"
+    customSiteTitle: "AJ CA1"
   };
 
 // serve swagger doc
@@ -35,7 +34,7 @@ const swaggerSpec = swaggerJsDoc(options);
 app.use('/', swaggerUi.serve);
 app.get('/', swaggerUi.setup(swaggerSpec))
 
-app.use('/public', express.static(path.join(ROOT_FOLDER, 'public')));
+app.use('/public', express.static(__dirname + '/public/'));
 
 // login middleware
 app.use((req, res, next) => {
