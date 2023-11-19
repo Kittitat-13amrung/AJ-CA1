@@ -30,7 +30,7 @@ const options = {
 // serve swagger doc
 const swaggerSpec = swaggerJsDoc(options);
 app.get("/swagger-ui-bundle.js", express.static(__dirname + "/swaggers/swagger-ui-bundle.js"));
-app.get("/swagger-ui-standalone-presets.js", express.static(__dirname + "/swaggers/swagger-ui-standalone-preset.js"))
+app.get("/swagger-ui-standalone-preset.js", express.static(__dirname + "/swaggers/swagger-ui-standalone-preset.js"))
 app.use("/", swaggerUi.serve);
 app.get("/", swaggerUi.setup(swaggerSpec, {
     customCssUrl:
