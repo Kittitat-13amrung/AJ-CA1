@@ -13,11 +13,11 @@ const imageUpload = require("../config/imageUpload");
 
 
 router
-    .post('/register', imageUpload.single("image"),register)
-    .post('/login', login)
-    .get('/:id', show)
-    .put('/:id/update', loginRequired, update)
-	.delete("/delete", loginRequired, destroy);
+    .post('/register', imageUpload.single("avatar"),register)
+    .post('/login', imageUpload.none(),login)
+    .get('/:id', imageUpload.none(), show)
+    .put('/update', [loginRequired, imageUpload.single("avatar")], update)
+	.delete("/delete", [loginRequired, imageUpload.none()], destroy);
 
 
 module.exports = router;

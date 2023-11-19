@@ -556,8 +556,6 @@ const create = async (req, res) => {
 	}
 	// if error occurs, delete stored image
 	else {
-        deleteImage(req.file.filename);
-
 		res.status(422).json({
 			message: "Image not uploaded!",
 		});
@@ -805,6 +803,7 @@ const update = (req, res) => {
 const destroy = (req, res) => {
     // assign id from request parameter called 'id'
 	let id = req.params.id;
+	let channel_id = req.channel._id;
 
 	Video.findByIdAndDelete(id)
 		.then((newVideo) => {
@@ -815,7 +814,7 @@ const destroy = (req, res) => {
 				});
 			} else {
                 // find and remove video id from the channel doc
-				Channel.findByIdAndUpdate(id, {
+				Channel.findByIdAndUpdate(channel_id, {
                     $pull: {
                         videos: newVideo._id
                     }

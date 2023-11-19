@@ -154,7 +154,7 @@ const index = (req, res) => {
 
 			// show comments if exist
 			if (comments.length > 0) {
-				const commentsLength = Math.max(10, comments.length);
+				let commentsLength = Math.max(await Comment.estimatedDocumentCount(), 10);
 
 				// return 200
 				res.status(200).json({
@@ -459,12 +459,53 @@ const show = (req, res) => {
  *                              example: errors
  *
  */
-const showChildComments = (req, res) => {
+const showChildComments = async(req, res) => {
 	const id = req.params.id;
 	const perPage = req.query.limit ? Math.max(10, req.query.limit) : 10;
-	const page = req.query.page ? Math.max(0, req.query.page) : 0;
+	const page = req.query.page ? Math.max(1, req.query.page) : 1;
 
-	Comment.find({ _parent_comment_id: id })
+    if(await Comment.countDocuments({ _parent_comment_id: id }) < 10) {
+        Comment.find({ _parent_comment_id: id })
+		.populate([
+			{
+				path: "_channel_id",
+				select: "_id username subscriber avatar",
+			},
+		])
+		.then(async (comments) => {
+			if (!comments)
+				res.status(404).json({
+					message: `Parent comment ${id} not found!`,
+				});
+                
+
+			// get the largest num. to use as a division for value of pages
+			const commentsLength = Math.max(
+				await Comment.countDocuments({ _parent_comment_id: id }),
+				10
+			);
+
+			// if collection contains documents
+			// returns 200 status
+			res.status(200).json({
+				page: page,
+				pages: 1,
+				comments,
+			});
+		})
+		.catch((err) => {
+			if (err.name === "CastError") {
+				console.error(err);
+				res.status(404).json({
+					message: `Comment ${id} not found!`,
+				});
+			} else {
+				console.error(err);
+				res.status(500).json(err);
+			}
+		});
+    } else {
+        Comment.find({ _parent_comment_id: id })
 		.populate([
 			{
 				path: "_channel_id",
@@ -478,17 +519,18 @@ const showChildComments = (req, res) => {
 				res.status(404).json({
 					message: `Parent comment ${id} not found!`,
 				});
+                
 
 			// get the largest num. to use as a division for value of pages
 			const commentsLength = Math.max(
-				await Comment.estimatedDocumentCount({ _parent_comment_id: id }),
+				await Comment.countDocuments({ _parent_comment_id: id }),
 				10
 			);
 
 			// if collection contains documents
 			// returns 200 status
 			res.status(200).json({
-				page: page + 1,
+				page: page,
 				pages: Math.floor(commentsLength / perPage),
 				comments,
 			});
@@ -504,6 +546,7 @@ const showChildComments = (req, res) => {
 				res.status(500).json(err);
 			}
 		});
+    }
 };
 
 // create comment in a video
@@ -521,7 +564,7 @@ const showChildComments = (req, res) => {
  *          - in: path
  *            name: id
  *            type: string
- *            description: The video ObjectID
+ *            description: The comment ObjectID
  *            default: 653c303970f555b2245cf569
  *     requestBody:
  *      content:
@@ -589,17 +632,18 @@ const showChildComments = (req, res) => {
  *                              example: errors
  *
  */
-const createCommentInVideo = (req, res) => {
+const createCommentInVideo = async(req, res) => {
 	let form = req.body;
 
 	const videoId = req.params.videoId;
 	// assign video id to form
+	// get video id from parent comment id
 	form._video_id = videoId;
+    form._channel_id = req.channel._id;
 
 	// create comment
 	Comment.create(form)
 		.then((data) => {
-			console.log(`New Comment Created`, data);
 			// push comment id to video
 			Video.findByIdAndUpdate(
 				{ _id: videoId },
@@ -719,6 +763,7 @@ const createCommentInComment = async (req, res) => {
 
 	// get video id from parent comment id
 	form._video_id = await Comment.findById({ _id: commentId })._video_id;
+    form._channel_id = req.channel._id;
 	form._parent_comment_id = commentId;
 
 	// create child comment
@@ -848,14 +893,10 @@ const createCommentInComment = async (req, res) => {
  */
 const update = (req, res) => {
 	const id = req.params.id;
-	const body = req.body.body;
-
-	// destructuring object to exclude properties from form
-	const { _id, channel_id, _video_id, likes, dislikes, _parent_comment_id } =
-		form;
+	const body = req.body;
 
 	//connect to model and retrieve comment with specified id
-	Comment.findByIdAndUpdate(id, form, {
+	Comment.findByIdAndUpdate(id, body, {
 		new: true,
 	})
 		.then((updatedData) => {

@@ -5,6 +5,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const Comment = require("../Models/comment.model");
 require("dotenv").config();
+const deleteImage = require("../config/ImageDelete");
 
 // register new channel
 /**
@@ -26,11 +27,17 @@ require("dotenv").config();
  *                          required: true
  *                          description: the email will be use for registration
  *                          example: sam.scott@gmail.com
+ *                      username:
+ *                          type: string
+ *                          required: true
+ *                          description: the username wil be use for registration
+ *                          example: sscott123
  *                      password:
  *                          type: string
  *                          required: true
  *                          description: the password will be used for login
- *                          example: Food
+ *                          example: secret0123
+ *                          format: password
  *                      avatar:
  *                          type: string
  *                          format: binary
@@ -98,6 +105,17 @@ const register = (req, res) => {
 	// validate request body
 	let err = newChannel.validateSync();
 
+	if (req.file) {
+		// assign thumbnail property to request file
+		newChannel.avatar = req.file.location;
+	}
+	// if error occurs, delete stored image
+	else {
+		res.status(422).json({
+			message: "Image not uploaded!",
+		});
+	}
+
 	// return error if exists
 	if (err) {
 		console.error(err);
@@ -142,7 +160,8 @@ const register = (req, res) => {
  *                          type: string
  *                          required: true
  *                          description: the password will be used for login
- *                          example: Food
+ *                          format: password
+ *                          example: secret0123
  *     responses:
  *       200:
  *         description: Returns the created channel data.
@@ -151,39 +170,10 @@ const register = (req, res) => {
  *             schema:
  *              type: object
  *              properties:
- *                  _id:
+ *                  token:
  *                      type: string
- *                      description: The channel objectID.
- *                      example: 653d699d13d7c3d86a91c9ed
- *                  username:
- *                      type: string
- *                      description: channel's username.
- *                      example: Diana01
- *                  email:
- *                      type: string
- *                      description: channel's email address.
- *                      example: Diana01@gmail.com
- *                  avatar:
- *                      type: string
- *                      description: channel's avatar url
- *                      example: https://avatars.githubusercontent.com/u/16180050
- *                  subscriber:
- *                      type: integer
- *                      description: channel's subscriber amount
- *                      example: 0
- *                  videos:
- *                      type: array
- *                      description: list of video ObjectID
- *                  createdAt:
- *                      type: string
- *                      format: date
- *                      description: the date the comment is created
- *                      example: 2023-05-18T07:07:14.036Z
- *                  updatedAt:
- *                      type: string
- *                      format: date
- *                      description: the date the comment is updated
- *                      example: 2023-05-18T07:07:14.036Z
+ *                      description: The channel token.
+ *                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRheXRvbl9oZXJtYW5uLW1lcnR6QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiRGF5dG9uX0hlcm1hbm4tTWVydHoiLCJfaWQiOiI2NTNhZGRmMThmZTRhOGJmY2M4MmJkZTkiLCJpYXQiOjE3MDA0MDAwMTJ9.mnZ03RKqT9bi-v2dLL6wvvwi31p6vUHqxAd16WOV8BQ
  *
  *       401:
  *         description: authentication failed
@@ -211,6 +201,8 @@ const register = (req, res) => {
 const login = (req, res) => {
 	// store login credential
 	const credential = req.body;
+
+	console.log(req);
 
 	// find channel by email
 	Channel.findOne({ email: credential.email })
@@ -360,7 +352,7 @@ const show = (req, res) => {
 // update channel
 /**
  * @openapi
- * /api/channels/{id}/update:
+ * /api/channels/update:
  *   put:
  *     security:
  *      - bearerAuth: []
@@ -368,37 +360,27 @@ const show = (req, res) => {
  *      - channels
  *     summary: Update a channel using ObjectID
  *     description: Update a channel using ObjectID.
- *     parameters:
- *      - in: path
- *        name: id
- *        type: string
- *        description: Channel ObjectID
- *        default: 653c303970f555b2245cf569
  *     requestBody:
  *      content:
  *          multipart/form-data:
  *              schema:
  *                  type: object
  *                  properties:
- *                      title:
+ *                      username:
  *                          type: string
- *                          required: true
- *                          description: the title of the channel
- *                          example: This is the title of the channel.
- *                      tag:
+ *                          description: the username of the channel
+ *                          example: This is the username of the channel.
+ *                      password:
  *                          type: string
- *                          required: true
- *                          description: the tag of the channel
- *                          example: Food
- *                      description:
- *                          type: string
- *                          description: the description ofthe channel
- *                          exmaple: Lorem ipsum
+ *                          description: the password of the channel
+ *                          format: password
+ *                          examle: secret0123
  *                      avatar:
  *                          type: string
+ *                          description: profile picture of the channel
  *                          format: binary
  *     responses:
- *       200:
+ *       201:
  *         description: Returns the updated channel data.
  *         content:
  *           application/json:
@@ -453,11 +435,28 @@ const show = (req, res) => {
  */
 const update = (req, res) => {
 	let form = req.body;
-	const id = req.params.id;
+	const id = req.channel._id;
 
 	// check for imgs
 	if (req.file) {
 		form.thumbnail = req.file.filename;
+
+        Channel.findById(id)
+        .then(channel => {
+            // delete profile image
+            if (channel.avatar) {
+                const url = channel.avatar.split("/");
+                const isBaseURL = url[2].includes(
+                    "advanced-js.s3.eu-west-1.amazonaws.com"
+                );
+    
+                if (isBaseURL) {
+                    deleteImage(url[3]);
+    
+                    console.log("deleted");
+                }
+            }
+        });
 	}
 
 	// check if channel exists
@@ -488,55 +487,49 @@ const update = (req, res) => {
 };
 
 // delete channel
-    /**
-	 * @openapi
-	 * /api/channels/{id}/delete:
-	 *   delete:
-     *     security:
-     *      - bearerAuth: []
-     *     tags:
-     *      - channels
-	 *     summary: Delete a channel using ObjectID
-	 *     description: Delete a channel using ObjectID.
-     *     parameters:
-     *      - in: path
-     *        name: id
-     *        type: string
-     *        description: Channel ObjectID
-     *        default: 653c303970f555b2245cf569
-	 *     responses:
-	 *       201:
-	 *         description: channel deleted
-	 *         content:
-	 *           application/json:
-     *              schema:
-     *                  properties:
-     *                      message:
-     *                          type: array
-     *                          items:
-     *                              example: The channel has been successfully deleted
-	 *       404:
-	 *         description: channel not found
-	 *         content:
-	 *           application/json:
-     *              schema:
-     *                  properties:
-     *                      message:
-     *                          type: array
-     *                          items:
-     *                              example: The channel found                               
-	 *       500:
-	 *         description: Internal error
-	 *         content:
-	 *           application/json:
-     *              schema:
-     *                  properties:
-     *                      errors:
-     *                          type: array
-     *                          items:
-     *                              example: errors
-     *                                          
-	 */ 
+/**
+ * @openapi
+ * /api/channels/delete:
+ *   delete:
+ *     security:
+ *      - bearerAuth: []
+ *     tags:
+ *      - channels
+ *     summary: Delete a channel using ObjectID
+ *     description: Delete a channel using ObjectID.
+ *     responses:
+ *       201:
+ *         description: channel deleted
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      message:
+ *                          type: array
+ *                          items:
+ *                              example: The channel has been successfully deleted
+ *       404:
+ *         description: channel not found
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      message:
+ *                          type: array
+ *                          items:
+ *                              example: The channel found
+ *       500:
+ *         description: Internal error
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      errors:
+ *                          type: array
+ *                          items:
+ *                              example: errors
+ *
+ */
 const destroy = async (req, res) => {
 	// assign id from request parameter called 'id'
 	let id = req.channel._id;
@@ -569,6 +562,22 @@ const destroy = async (req, res) => {
 					if (await Comment.exists({ _channel_id: id })) {
 						await Comment.deleteMany({ _channel_id: id });
 					}
+
+					// delete profile image
+					if (channel.avatar) {
+						const url = channel.avatar.split("/");
+						const isBaseURL = url[2].includes(
+							"advanced-js.s3.eu-west-1.amazonaws.com"
+						);
+
+						if (isBaseURL) {
+							deleteImage(url[3]);
+
+							console.log("deleted");
+						}
+					}
+
+					res.status(200).json(deletedChannel);
 				});
 			}
 		})

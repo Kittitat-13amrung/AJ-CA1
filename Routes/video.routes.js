@@ -14,8 +14,8 @@ const imageUpload = require("../config/imageUpload");
 router
 	.get("/", index)
 	.get("/:id", show)
-	.post("/create", [loginRequired, imageUpload.single("image")], create)
-	.put("/:id/update", loginRequired, update)
-	.delete("/:id/delete", loginRequired, destroy);
+	.post("/create", [loginRequired, imageUpload.single("thumbnail")], create)
+	.put("/:id/update", [loginRequired, imageUpload.none()], update)
+	.delete("/:id/delete", [loginRequired, imageUpload.none()], destroy);
 
 module.exports = router;
