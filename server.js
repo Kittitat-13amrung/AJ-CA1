@@ -32,7 +32,7 @@ const swaggerSpec = swaggerJsDoc(options);
 app.use("/", swaggerUi.serve);
 app.get("/", swaggerUi.setup(swaggerSpec, {
     customCssUrl:
-    '/public/swagger-ui.css',
+    'https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/4.1.0/swagger-ui.min.css',
     customSiteTitle: "AJ CA1",
 }));
 
