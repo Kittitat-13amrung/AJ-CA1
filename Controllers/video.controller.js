@@ -101,7 +101,7 @@ const create = async (req, res) => {
 
 	if (req.file) {
         // assign thumbnail property to request file
-		form.thumbnail = req.file.filename;
+		form.thumbnail = req.file.location;
 	}
 	// if error occurs, delete stored image
 	else {

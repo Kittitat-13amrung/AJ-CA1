@@ -15,6 +15,7 @@ const channelSchema = new Schema({
     timestamps: true
 });
 
+// compare password with existing password
 channelSchema.methods.comparePassword = function(password) {
     return bcrypt.compareSync(password, this.password);
 };

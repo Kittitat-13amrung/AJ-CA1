@@ -20,7 +20,6 @@ const videoSchema = new Schema({
             ref: 'Comment'
         }
     ],
-    // _channel_id: { type: ObjectId, ref: 'Channel', require: true},
     channel: { type: ObjectId, ref: 'Channel', required: true},
 }, {
     timestamps: true

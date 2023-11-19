@@ -2,13 +2,15 @@ const Comment = require('../Models/comment.model');
 const Video = require('../Models/video.model');
 
 const index = (req, res) => {
+    // API queries
     const page =  req.query.page | 0;
     const perPage = req.query.limit | 10;
 
+    // find comments and linking any relationships
     Comment.find().populate([
         {
             path: '_channel_id',
-            select: '-email -password -videos -__v -roles'
+            select: '-email -password -videos -__v -roles' //removing sensitive info
         },
         {
             path: '_parent_comment_id',
@@ -18,14 +20,16 @@ const index = (req, res) => {
             select: ['_id', 'title', 'url']
         },
     ])
-    .limit(perPage)
+    .limit(perPage) //pagination
     .skip(page * perPage)
     .then(async(comments) => {
-        console.log(comments);
+        // console.log(comments);
 
+        // show comments if exist
         if(comments.length > 0) {
             const commentsLength = Math.max(10, comments.length)
 
+            // return 200
             res.status(200).json({
                 page: page + 1,
                 pages: Math.floor(commentsLength / perPage),
@@ -44,9 +48,11 @@ const index = (req, res) => {
 
 };
 
+// showing comments by id
 const show = (req, res) => {
     const id = req.params.id;
 
+    // find comment and populate relationships
     Comment.findById(id).populate([
         {
             path: '_channel_id',
@@ -60,6 +66,7 @@ const show = (req, res) => {
         }
     ])
     .then(comment => {
+        // if comment not found return 404
         if(!comment) res.status(404).json({
             message: `Comment ${id} not found!`
         });
@@ -79,6 +86,7 @@ const show = (req, res) => {
     })
 }
 
+// show child comments of a given comment id
 const showChildComments = (req, res) => {
     const id = req.params.id;
     const page = 0;
@@ -123,17 +131,19 @@ const showChildComments = (req, res) => {
     })
 }
 
+// create comment in a video
 const createCommentInVideo = (req, res) => {
     let form = req.body;
-
+    
     const videoId = req.params.videoId
-
+    // assign video id to form
     form._video_id = videoId;
 
+    // create comment
     Comment.create(form)
     .then(data => {
         console.log(`New Comment Created`, data);
-
+        // push comment id to video 
         Video.findByIdAndUpdate({ _id: videoId }, {
             $push: {
                 'comments': data._id
@@ -156,19 +166,21 @@ const createCommentInVideo = (req, res) => {
 
 }
 
+// create a comment in a parent comment
 const createCommentInComment = async(req, res) => {
     let form = req.body;
 
     let commentId = req.params.commentId
 
+    // get video id from parent comment id
     form._video_id = await Comment.findById({ _id: commentId })._video_id;
     form._parent_comment_id = commentId;
 
-
+    // create child comment
     Comment.create(form)
     .then(data => {
         console.log(`New Comment Created`, data);
-
+        // push child comment to video
         Video.findByIdAndUpdate({ _id: form._video_id }, {
             $push: {
                 'comments': data._id
@@ -191,15 +203,16 @@ const createCommentInComment = async(req, res) => {
 
 }
 
+// update comment function
 const update = (req, res) => {
     const id = req.params.id;
     const body = req.body.body;
 
     // destructuring object to exclude properties from form
-    // const { _id, channel_id, _video_id, likes, dislikes, _parent_comment_id, } = form;
+    const { _id, channel_id, _video_id, likes, dislikes, _parent_comment_id } = form;
 
      //connect to model and retrieve comment with specified id
-     Comment.findByIdAndUpdate(id, body, {
+     Comment.findByIdAndUpdate(id, form, {
         new: true
      })
      .then(updatedData => {
@@ -220,9 +233,10 @@ const update = (req, res) => {
      });
 }
 
+// delete comment function
 const destroy = (req, res) => {
     let id = req.params.id;
-
+    // find comment and delete
     Comment.findByIdAndDelete(id)
     .then(data => {
         if(!data) {
@@ -230,7 +244,7 @@ const destroy = (req, res) => {
                 message: `Comment ${id} not found!`
             });
         } else {
-
+            // find video and delete comment id from comments array
             Video.findByIdAndUpdate({ _id: data._video_id }, {
                 $pull: {
                     'comments': id

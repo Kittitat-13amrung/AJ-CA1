@@ -6,7 +6,6 @@ const commentSchema = new Schema({
     body: { type: String, required: true },
     likes: { type: Number, default: 0 },
     dislikes: { type: Number, default: 0 },
-    // comments: [{ type: ObjectId, ref: 'Comment', required: false }],
     _parent_comment_id: { type: ObjectId, ref: 'Comment', required: false}
 }, {
     timestamps: true

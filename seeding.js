@@ -3,17 +3,21 @@ const mongodb = require("mongodb");
 const data = require("./data.json");
 const Faker = require("@faker-js/faker");
 const { faker } = Faker;
+const bcrypt = require('bcryptjs');
 const Video = require("./Models/video.model");
 const Channel = require("./Models/channel.model");
 const Comment = require("./Models/comment.model");
 
-async function ChannelFactory(epoch = 500) {
-	for (i = 0; i < epoch; i++) {
+// create channels with random credentials & info
+async function ChannelFactory(amount = 500) {
+	for (i = 0; i < amount; i++) {
+		// randomise first & last name
 		const first_name = faker.person.firstName();
 		const last_name = faker.person.lastName();
 
 		// create channels to comment videos
 		const channelData = {
+			// create username, email based off of first & last name
 			username: faker.internet.userName({
 				firstName: first_name,
 				lastName: last_name,
@@ -22,7 +26,8 @@ async function ChannelFactory(epoch = 500) {
 				firstName: first_name,
 				lastName: last_name,
 			}),
-			password: faker.internet.password(),
+			// encrypt password
+			password: bcrypt.hashSync('secret0123', 10),
 			subscribers: faker.number.int({
 				min: 0,
 				max: 100000,
@@ -31,15 +36,12 @@ async function ChannelFactory(epoch = 500) {
 		};
 
 		const channel = new Channel(channelData);
-
+		// save new channel to DB
 		await channel.save();
 	}
 }
 
-// async function dropDB() {
-//     mongoose.dr
-// }
-
+// load data from local JSON data to create videos, comments & nested comments 
 async function loadData(from = 0, to = data.length) {
 	// keep track of how many videos has been iterated
 	let videoIterate = from;
@@ -47,15 +49,16 @@ async function loadData(from = 0, to = data.length) {
 	if (to > data.length) to = data.length;
 
 	while (videoIterate < to) {
+
 		// random the amount of videos to populate the model
 		// let amountOfVideos = to - from;
 		let amountOfVideos = faker.number.int({
 			min: 0,
 			max: 500,
 		});
+
 		// create channels to populate videos
 		const channelData = {
-			// _id: mongoose.Schema.ObjectId,
 			first_name: faker.person.firstName(),
 			last_name: faker.person.lastName(),
 			username: faker.internet.userName({
@@ -74,17 +77,18 @@ async function loadData(from = 0, to = data.length) {
 			createdAt: faker.date.past({ year: 10 }),
 		};
 
+		// create channel instance
 		const channel = new Channel(channelData);
-
-		// await channel.save();
 
 		// check if (the randomised number plus all iterated videos) are greater than the length of data
 		if (amountOfVideos + videoIterate > to) {
 			amountOfVideos = to - videoIterate;
 		}
 
+		// iterate through amount videos
 		for (let i = 0; i < amountOfVideos; i++) {
 
+			// deconstruct obj & rename to convention name of the DB model
 			const {
 				Title: title,
 				Videourl: url,
@@ -92,6 +96,7 @@ async function loadData(from = 0, to = data.length) {
 				Description: description,
 			} = data[i];
 
+			// assign obj props to new video
 			const newVideo = {
 				title,
 				description,
@@ -107,15 +112,19 @@ async function loadData(from = 0, to = data.length) {
 				}),
 				channel: channel._id,
 			};
+			
 			const video = new Video(newVideo);
 
+			// random amount of comments
 			const amountOfComments = faker.number.int({
 				min: 0,
 				max: 250,
 			});
 
+			// logging the amount of comments
 			console.log(`amount of comment: ${amountOfComments}`);
 
+			// pick from existing channels to comment on video
 			const channels = await Channel.aggregate([
 				{
 					$sample: { size: amountOfComments },
@@ -125,7 +134,7 @@ async function loadData(from = 0, to = data.length) {
 			console.log(`retrieved all channels to produce comments`);
 
 			const comments = [];
-
+			// iterate through all the channels to comment in video
 			for (let j = 0; j < channels.length; j++) {
 				const body = faker.lorem.lines();
 
@@ -145,13 +154,13 @@ async function loadData(from = 0, to = data.length) {
 
                 comments.push(comment);
 
-				// await comment.save();
-
+				// randomise child comments
 				const amountOfNestedComments = faker.number.int({
 					min: 0,
 					max: 4,
 				});
 
+				// pick existing channels to comment on parent comment
 				const nestedChannels = await Channel.aggregate([
 					{
 						$sample: { size: amountOfNestedComments },
@@ -159,7 +168,7 @@ async function loadData(from = 0, to = data.length) {
 				]);
 
 				let replies = [];
-
+				// iterate child comments and push fake data into array
 				for (let c = 0; c < nestedChannels.length; c++) {
 					const nestedBody = faker.lorem.lines();
 
@@ -182,33 +191,36 @@ async function loadData(from = 0, to = data.length) {
 					// await reply.save();
 				}
 
+				// push ids of child comments to video doc
 				replies.forEach((reply) => video.comments.push(reply._id));
 
+				// bulk save child comments to DB
 				await Comment.bulkSave(replies);
 
+				// push ids of parent comments to video 
 				video.comments.push(comment._id);
 			}
 
+			// bulk save all comments both parent & child
 			await Comment.bulkSave(comments);
 
+			// save video to DB
 			await video.save();
 
+			// push video id into video array in channel
 			channel.videos.push(video._id);
 
             await channel.save();
 		}
 
+		// keep count of videos iterated
 		videoIterate += amountOfVideos;
 
-		// console.log(videos)
-
-		// add randomised number to amount of iterated videos
 	}
 
+	// upon success, log to console
 	console.log("successfully seeded the database");
 }
-
-// loadData();
 
 module.exports = {
 	loadData,
