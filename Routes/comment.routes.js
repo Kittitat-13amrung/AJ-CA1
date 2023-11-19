@@ -20,8 +20,8 @@ router
     .get('/:id/children', showChildComments)
     .post('/:commentId/create', loginRequired, createCommentInComment)
     .post('/video/:videoId/create', loginRequired, createCommentInVideo)
-    .put('/:id', loginRequired, update)
-    .delete('/:id', loginRequired, destroy);
+    .put('/:id/update', loginRequired, update)
+    .delete('/:id/delete', loginRequired, destroy);
 
 
 module.exports = router;

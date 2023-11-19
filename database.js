@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const { Schema, Connection } = mongoose;
 require('dotenv').config();
+const bcrypt = require('bcryptjs');
 const {loadData, ChannelFactory} = require('./seeding');
 const Video = require('./Models/video.model')
 const Channel = require('./Models/channel.model')
@@ -18,6 +19,7 @@ const url = `mongodb+srv://n00201327:secret0123@cluster0.yxq2uw7.mongodb.net/CA1
 const connect = async () => {
     await mongoose.connect(url);
 
+    // log successful DB connectivity
     console.log('database successfully connected');
 
     // console.log('seeding channels');
@@ -28,21 +30,16 @@ const connect = async () => {
     const channels = await Channel.find();
 
     for(const channel of channels) {
-        const isAdmin = (channel.email === "n00201327@iadt.ie") ? ['admin', 'user'] : ['user'];
-
-        const updatedChannel = await Channel.findOneAndUpdate({ _id: channel._id }, {
-            $push: {
-                roles: {
-                    $each: isAdmin
-                }
-            }
-        }, {
-            strict: false,
-            new: true,
-            timestamps: false,
-        });
+        if(channel.email !== "n00201327@gmail.com") {
+            const updatedChannel = await Channel.findOneAndUpdate({ _id: channel._id }, {
+                password: bcrypt.hashSync('secret0123', 10)
+            }, {
+                strict: false,
+                new: true,
+                timestamps: false,
+            });
+        }
         
-        console.log(updatedChannel.roles)
     }
 
     // console.log(result)

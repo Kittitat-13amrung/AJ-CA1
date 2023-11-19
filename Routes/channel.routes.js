@@ -5,16 +5,19 @@ const {
     login,
     loginRequired,
     show,
-    update
+    update,
+    destroy
 } = require('../Controllers/channels.controller');
 
+const imageUpload = require("../config/imageUpload");
 
 
 router
-    // .get('/', show)
-    .post('/register', register)
+    .post('/register', imageUpload.single("image"),register)
     .post('/login', login)
     .get('/:id', show)
     .put('/:id/update', loginRequired, update)
+	.delete("/delete", loginRequired, destroy);
+
 
 module.exports = router;

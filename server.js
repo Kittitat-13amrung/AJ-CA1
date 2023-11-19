@@ -1,4 +1,6 @@
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
 require('dotenv').config();
 require('./config/db')();
 const jwt = require('jsonwebtoken');
@@ -9,8 +11,24 @@ const port = 3000;
 
 app.use(express.json());
 
-app.set('view engine', 'html');
-app.use(express.static(__dirname + '/views/'));
+// app.set('view engine', 'html');
+// app.use(express.static(__dirname + '/views/'));
+
+const options = {
+    failOnErrors: true, // Whether or not to throw when parsing errors. Defaults to false.
+    definition: {
+      openapi: '3.0.0',
+      info: {
+        title: 'YouTube API',
+        version: '1.0.0',
+      },
+    },
+    apis: ['./Controllers/*.controller.js'],
+  };
+
+// serve swagger doc
+const swaggerSpec = swaggerJsDoc(options);
+app.use('/document', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // login middleware
 app.use((req, res, next) => {
@@ -81,5 +99,5 @@ app.use('/api/comments', require('./Routes/comment.routes'));
 
 // serve API
 app.listen(port, (req, res) => {
-    console.log(`Example app listening on port ${port}`);
+    console.log(`CA1 App listening on port ${port}`);
 })
