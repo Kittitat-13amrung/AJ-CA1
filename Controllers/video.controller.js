@@ -186,7 +186,7 @@ const deleteImage = require('../config/ImageDelete');
 const index = (req, res) => {
     // pagination and related queries
 	const commentLimit =  req.query.comment_limit ? Math.max(10, req.query.comment_limit) : 10;
-	const perPage = req.query.limit ? Math.max(10, req.query.limit) : 10;
+	const perPage = req.query.limit ? Math.max(8, req.query.limit) : 8;
 	const page = req.query.page ? Math.max(0, req.query.page) : 0;
 
     // find all videos in DB
@@ -209,7 +209,7 @@ const index = (req, res) => {
 		.skip(perPage * page)
 		.then(async (videos) => {
             // get length of video array and use it for pagination numbering
-			let videosLength = Math.max(await Video.estimatedDocumentCount(), 10);
+			let videosLength = Math.max(await Video.estimatedDocumentCount(), 8);
             // if collection contains documents
             // returns 200 status
 			if (videos.length > 0) {
