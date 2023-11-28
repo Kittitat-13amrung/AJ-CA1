@@ -143,7 +143,7 @@ const register = (req, res) => {
  *   post:
  *     tags:
  *      - channels
- *     summary: Log-in to channel
+ *     summary: Log in to channel
  *     description: Log in to channel. This returns a token to access authenticated routes
  *     requestBody:
  *      content:
@@ -164,28 +164,28 @@ const register = (req, res) => {
  *                          example: secret0123
  *     responses:
  *       200:
- *         description: Returns the created channel data.
+ *         description: Returns the channel with the matching credential with its access token.
  *         content:
  *           application/json:
  *             schema:
  *              type: object
  *              properties:
+ *                  _id:
+ *                      type: string
+ *                      description: The channel objectID.
+ *                      example: 653d699d13d7c3d86a91c9ed
+ *                  username:
+ *                      type: string
+ *                      description: channel's username.
+ *                      example: Diana01
+ *                  avatar:
+ *                      type: string
+ *                      description: channel's avatar url
+ *                      example: https://avatars.githubusercontent.com/u/16180050
  *                  token:
  *                      type: string
- *                      description: The channel token.
- *                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRheXRvbl9oZXJtYW5uLW1lcnR6QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiRGF5dG9uX0hlcm1hbm4tTWVydHoiLCJfaWQiOiI2NTNhZGRmMThmZTRhOGJmY2M4MmJkZTkiLCJpYXQiOjE3MDA0MDAwMTJ9.mnZ03RKqT9bi-v2dLL6wvvwi31p6vUHqxAd16WOV8BQ
- * 					username:
- *                      type: string
- *                      description: The channel name.
- *                      example: Test0123
- * 					_id:
- *                      type: string
- *                      description: The channel ObjectID.
- *                      example: 653c303970f555b2245cf569
- *					avatar:
- *                      type: string
- *                      description: The channel's avatar url.
- *                      example: https://avatars.githubusercontent.com/u/16180050
+ *                      description: channel's access token
+ *                      example: token
  *
  *       401:
  *         description: authentication failed
@@ -456,22 +456,21 @@ const update = (req, res) => {
 	if (req.file) {
 		form.thumbnail = req.file.filename;
 
-        Channel.findById(id)
-        .then(channel => {
-            // delete profile image
-            if (channel.avatar) {
-                const url = channel.avatar.split("/");
-                const isBaseURL = url[2].includes(
-                    "advanced-js.s3.eu-west-1.amazonaws.com"
-                );
-    
-                if (isBaseURL) {
-                    deleteImage(url[3]);
-    
-                    console.log("deleted");
-                }
-            }
-        });
+		Channel.findById(id).then((channel) => {
+			// delete profile image
+			if (channel.avatar) {
+				const url = channel.avatar.split("/");
+				const isBaseURL = url[2].includes(
+					"advanced-js.s3.eu-west-1.amazonaws.com"
+				);
+
+				if (isBaseURL) {
+					deleteImage(url[3]);
+
+					console.log("deleted");
+				}
+			}
+		});
 	}
 
 	// check if channel exists
