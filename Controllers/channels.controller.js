@@ -174,6 +174,18 @@ const register = (req, res) => {
  *                      type: string
  *                      description: The channel token.
  *                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRheXRvbl9oZXJtYW5uLW1lcnR6QGdtYWlsLmNvbSIsInVzZXJuYW1lIjoiRGF5dG9uX0hlcm1hbm4tTWVydHoiLCJfaWQiOiI2NTNhZGRmMThmZTRhOGJmY2M4MmJkZTkiLCJpYXQiOjE3MDA0MDAwMTJ9.mnZ03RKqT9bi-v2dLL6wvvwi31p6vUHqxAd16WOV8BQ
+ * 					username:
+ *                      type: string
+ *                      description: The channel name.
+ *                      example: Test0123
+ * 					_id:
+ *                      type: string
+ *                      description: The channel ObjectID.
+ *                      example: 653c303970f555b2245cf569
+ *					avatar:
+ *                      type: string
+ *                      description: The channel's avatar url.
+ *                      example: https://avatars.githubusercontent.com/u/16180050
  *
  *       401:
  *         description: authentication failed
@@ -195,7 +207,7 @@ const register = (req, res) => {
  *                      message:
  *                          type: array
  *                          items:
- *                              example: The video found
+ *                              example: The channel not found
  *
  */
 const login = (req, res) => {
@@ -230,6 +242,9 @@ const login = (req, res) => {
 			);
 
 			return res.status(200).json({
+				_id: channel._id,
+				username: channel.username,
+				avatar: channel.avatar,
 				token,
 			});
 		})
