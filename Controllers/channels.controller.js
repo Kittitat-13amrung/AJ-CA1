@@ -454,7 +454,7 @@ const update = (req, res) => {
 
 	// check for imgs
 	if (req.file) {
-		form.avatar = req.file.filename;
+		form.avatar = req.file.location;
 
 		Channel.findById(id).then((channel) => {
 			// delete profile image saved on AWS Bucket
