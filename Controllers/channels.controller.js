@@ -454,10 +454,10 @@ const update = (req, res) => {
 
 	// check for imgs
 	if (req.file) {
-		form.thumbnail = req.file.filename;
+		form.avatar = req.file.filename;
 
 		Channel.findById(id).then((channel) => {
-			// delete profile image
+			// delete profile image saved on AWS Bucket
 			if (channel.avatar) {
 				const url = channel.avatar.split("/");
 				const isBaseURL = url[2].includes(
