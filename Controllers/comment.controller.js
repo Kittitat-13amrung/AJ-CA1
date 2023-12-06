@@ -154,7 +154,10 @@ const index = (req, res) => {
 
 			// show comments if exist
 			if (comments.length > 0) {
-				let commentsLength = Math.max(await Comment.estimatedDocumentCount(), 10);
+				let commentsLength = Math.max(
+					await Comment.estimatedDocumentCount(),
+					10
+				);
 
 				// return 200
 				res.status(200).json({
@@ -459,94 +462,92 @@ const show = (req, res) => {
  *                              example: errors
  *
  */
-const showChildComments = async(req, res) => {
+const showChildComments = async (req, res) => {
 	const id = req.params.id;
 	const perPage = req.query.limit ? Math.max(10, req.query.limit) : 10;
 	const page = req.query.page ? Math.max(1, req.query.page) : 1;
 
-    if(await Comment.countDocuments({ _parent_comment_id: id }) < 10) {
-        Comment.find({ _parent_comment_id: id })
-		.populate([
-			{
-				path: "_channel_id",
-				select: "_id username subscriber avatar",
-			},
-		])
-		.then(async (comments) => {
-			if (!comments)
-				res.status(404).json({
-					message: `Parent comment ${id} not found!`,
+	if ((await Comment.countDocuments({ _parent_comment_id: id })) < 10) {
+		Comment.find({ _parent_comment_id: id })
+			.populate([
+				{
+					path: "_channel_id",
+					select: "_id username subscriber avatar",
+				},
+			])
+			.then(async (comments) => {
+				if (!comments)
+					res.status(404).json({
+						message: `Parent comment ${id} not found!`,
+					});
+
+				// get the largest num. to use as a division for value of pages
+				const commentsLength = Math.max(
+					await Comment.countDocuments({ _parent_comment_id: id }),
+					10
+				);
+
+				// if collection contains documents
+				// returns 200 status
+				res.status(200).json({
+					page: page,
+					pages: 1,
+					comments,
 				});
-                
-
-			// get the largest num. to use as a division for value of pages
-			const commentsLength = Math.max(
-				await Comment.countDocuments({ _parent_comment_id: id }),
-				10
-			);
-
-			// if collection contains documents
-			// returns 200 status
-			res.status(200).json({
-				page: page,
-				pages: 1,
-				comments,
+			})
+			.catch((err) => {
+				if (err.name === "CastError") {
+					console.error(err);
+					res.status(404).json({
+						message: `Comment ${id} not found!`,
+					});
+				} else {
+					console.error(err);
+					res.status(500).json(err);
+				}
 			});
-		})
-		.catch((err) => {
-			if (err.name === "CastError") {
-				console.error(err);
-				res.status(404).json({
-					message: `Comment ${id} not found!`,
-				});
-			} else {
-				console.error(err);
-				res.status(500).json(err);
-			}
-		});
-    } else {
-        Comment.find({ _parent_comment_id: id })
-		.populate([
-			{
-				path: "_channel_id",
-				select: "_id username subscriber avatar",
-			},
-		])
-		.limit(perPage)
-		.skip(perPage * page)
-		.then(async (comments) => {
-			if (!comments)
-				res.status(404).json({
-					message: `Parent comment ${id} not found!`,
-				});
-                
+	} else {
+		Comment.find({ _parent_comment_id: id })
+			.populate([
+				{
+					path: "_channel_id",
+					select: "_id username subscriber avatar",
+				},
+			])
+			.limit(perPage)
+			.skip(perPage * page)
+			.then(async (comments) => {
+				if (!comments)
+					res.status(404).json({
+						message: `Parent comment ${id} not found!`,
+					});
 
-			// get the largest num. to use as a division for value of pages
-			const commentsLength = Math.max(
-				await Comment.countDocuments({ _parent_comment_id: id }),
-				10
-			);
+				// get the largest num. to use as a division for value of pages
+				const commentsLength = Math.max(
+					await Comment.countDocuments({ _parent_comment_id: id }),
+					10
+				);
 
-			// if collection contains documents
-			// returns 200 status
-			res.status(200).json({
-				page: page,
-				pages: Math.floor(commentsLength / perPage),
-				comments,
+				// if collection contains documents
+				// returns 200 status
+				res.status(200).json({
+					page: page,
+					pages: Math.floor(commentsLength / perPage),
+					comments,
+				});
+			})
+			.catch((err) => {
+				if (err.name === "CastError") {
+					console.error(err);
+					res.status(404).json({
+						message: `Comment ${id} not found!`,
+					});
+				} else {
+					console.error(err);
+					res.status(500).json(err);
+				}
 			});
-		})
-		.catch((err) => {
-			if (err.name === "CastError") {
-				console.error(err);
-				res.status(404).json({
-					message: `Comment ${id} not found!`,
-				});
-			} else {
-				console.error(err);
-				res.status(500).json(err);
-			}
-		});
-    }
+	}
 };
 
 // create comment in a video
@@ -632,14 +633,14 @@ const showChildComments = async(req, res) => {
  *                              example: errors
  *
  */
-const createCommentInVideo = async(req, res) => {
+const createCommentInVideo = async (req, res) => {
 	let form = req.body;
 
 	const videoId = req.params.videoId;
 	// assign video id to form
 	// get video id from parent comment id
 	form._video_id = videoId;
-    form._channel_id = req.channel._id;
+	form._channel_id = req.channel._id;
 
 	// create comment
 	Comment.create(form)
@@ -762,16 +763,20 @@ const createCommentInComment = async (req, res) => {
 	let commentId = req.params.commentId;
 
 	// get video id from parent comment id
-	form._video_id = await Comment.findById({ _id: commentId })._video_id;
-    form._channel_id = req.channel._id;
+	form._video_id = (await Comment.findById(commentId))._video_id;
+	form._channel_id = req.channel._id;
 	form._parent_comment_id = commentId;
+
+	// console.log(form._video_id);
+
+	res.status(201).json(form);
 
 	// create child comment
 	Comment.create(form)
-		.then((data) => {
+		.then(async (data) => {
 			console.log(`New Comment Created`, data);
 			// push child comment to video
-			Video.findByIdAndUpdate(
+			await Video.findByIdAndUpdate(
 				{ _id: form._video_id },
 				{
 					$push: {
@@ -918,55 +923,55 @@ const update = (req, res) => {
 };
 
 // delete comment function
-    /**
-	 * @openapi
-	 * /api/comments/{id}/delete:
-	 *   delete:
-     *     security:
-     *      - bearerAuth: []
-     *     tags:
-     *      - comments
-	 *     summary: Delete a comment using ObjectID
-	 *     description: Delete a comment using ObjectID.
-     *     parameters:
-     *      - in: path
-     *        name: id
-     *        type: string
-     *        description: Comment ObjectID
-     *        default: 653c303970f555b2245cf569
-	 *     responses:
-	 *       201:
-	 *         description: comment deleted
-	 *         content:
-	 *           application/json:
-     *              schema:
-     *                  properties:
-     *                      message:
-     *                          type: array
-     *                          items:
-     *                              example: The comment has been successfully deleted
-	 *       404:
-	 *         description: comment not found
-	 *         content:
-	 *           application/json:
-     *              schema:
-     *                  properties:
-     *                      message:
-     *                          type: array
-     *                          items:
-     *                              example: The comment found                               
-	 *       500:
-	 *         description: Internal error
-	 *         content:
-	 *           application/json:
-     *              schema:
-     *                  properties:
-     *                      errors:
-     *                          type: array
-     *                          items:
-     *                              example: errors
-     *                                          
-	 */   
+/**
+ * @openapi
+ * /api/comments/{id}/delete:
+ *   delete:
+ *     security:
+ *      - bearerAuth: []
+ *     tags:
+ *      - comments
+ *     summary: Delete a comment using ObjectID
+ *     description: Delete a comment using ObjectID.
+ *     parameters:
+ *      - in: path
+ *        name: id
+ *        type: string
+ *        description: Comment ObjectID
+ *        default: 653c303970f555b2245cf569
+ *     responses:
+ *       201:
+ *         description: comment deleted
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      message:
+ *                          type: array
+ *                          items:
+ *                              example: The comment has been successfully deleted
+ *       404:
+ *         description: comment not found
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      message:
+ *                          type: array
+ *                          items:
+ *                              example: The comment found
+ *       500:
+ *         description: Internal error
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      errors:
+ *                          type: array
+ *                          items:
+ *                              example: errors
+ *
+ */
 const destroy = (req, res) => {
 	let id = req.params.id;
 	// find comment and delete

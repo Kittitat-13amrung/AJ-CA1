@@ -399,7 +399,8 @@ const show = (req, res) => {
                 select: "-_video_id -createdAt", // deselect _video_id
 				limit: commentLimit, // limit amount of comments shown
 			},
-		]).select('-__v -createdAt')
+		])
+        .select('-__v -createdAt')
 		.then((video) => {
             // if video doesn't exist return 404
 			if (!video)
@@ -415,6 +416,218 @@ const show = (req, res) => {
 				console.error(err);
 				res.status(404).json({
 					message: `Video ${id} not found!`,
+				});
+			} else {
+				console.error(err);
+				res.status(500).json(err);
+			}
+		});
+};
+
+// Show Video By Id
+/**
+	 * @openapi
+	 * /api/videos/{id}:
+	 *   get:
+     *     tags:
+     *      - videos
+	 *     summary: Retrieve the video with a specific ObjectID
+	 *     description: Retrieve the video with a specific ObjectID.
+     *     parameters:
+     *          - in: path
+     *            name: id
+     *            type: string
+     *            description: The video ObjectID
+     *            default: 653c303970f555b2245cf569
+     *          - in: query
+     *            name: comment_limit
+     *            type: integer
+     *            description: The numbers of comments to show
+     *            default: 10
+	 *     responses:
+	 *       200:
+	 *         description: Returns the video with the same ObjectID.
+	 *         content:
+	 *           application/json:
+	 *             schema:
+     *              type: object
+     *              properties:
+     *                  _id:
+     *                      type: string
+     *                      description: The video objectID.
+     *                      example: 653d699d13d7c3d86a91c9ed
+     *                  title:
+     *                      type: string
+     *                      description: The video's title.
+     *                      example: This is a title of the video.
+     *                  url:
+     *                      type: string
+     *                      description: The video's url.
+     *                      example: /watch?v=xt4SsI6xcss
+     *                  tag:
+     *                      type: string
+     *                      description: The video's tag.
+     *                      example: Food
+     *                  description: 
+     *                      type: string
+     *                      description: The description of the video.
+     *                      example: Lorem ipsum.
+     *                  likes:
+     *                      type: integer
+     *                      description: number of likes in the video.
+     *                      example: 100
+     *                  dislikes:
+     *                      type: integer
+     *                      description: number of dislikes in the video.
+     *                      example: 2
+     *                  thumbnail:
+     *                      type: string
+     *                      description: video's thumbnail url.
+     *                      example: https://picsum.photos/640/320/?random&t=1670360628221
+     *                  comments:
+     *                      type: array
+     *                      items:
+     *                          type: object
+     *                          properties:
+     *                              _id:
+     *                                  type: string
+     *                                  description: Comment ObjectId.
+     *                                  example: 653d699d13d7c3d86a91c9f1
+     *                              _channel_id:
+     *                                  type: string
+     *                                  description: ObjectID of the channel that posted the comment.
+     *                                  example: 653d699d13d7c3d86a91c9f1
+     *                              _video_id:
+     *                                  type: string
+     *                                  description: ObjectID of the video that comment is posted on.
+     *                                  example: 653d699d13d7c3d86a91c9f1
+     *                              body:
+     *                                  type: string
+     *                                  description: comment's body.
+     *                                  example: Lorem Ipsum
+     *                              likes:
+     *                                  type: integer
+     *                                  description: number of likes in the comment.
+     *                                  example: 25
+     *                              dislikes:
+     *                                  type: integer
+     *                                  description: number of dislikes in the comment.
+     *                                  example: 8
+     *                              _parent_comment_id:
+     *                                  type: string
+     *                                  nullable: 'true'
+     *                                  description: ObjectId of the parent comment if the comment has one.
+     *                                  example: 653d699d13d7c3d86a91c9f1
+     *                              createdAt:
+     *                                  type: string
+     *                                  format: date
+     *                                  description: the date of which the video is created.
+     *                                  example: 2023-10-28T20:06:08.226Z
+     *                  channel:
+     *                      type: object
+     *                      properties:
+     *                          _id:
+     *                              type: string
+     *                              description: ObjectID of the channel that posted the video.
+     *                              example: 653d699d13d7c3d86a91c9f1
+     *                          username: 
+     *                              type: string
+     *                              description: channel's username.
+     *                              example: Diana01
+     *                          avatar:
+     *                              type: string
+     *                              description: channel's avatar url
+     *                              example: https://avatars.githubusercontent.com/u/16180050
+     *                  updatedAt: 
+     *                      type: string
+     *                      format: date
+     *                      description: the date the video is created/updated
+     *                      example: 2023-05-18T07:07:14.036Z
+     *                  duration:
+     *                      type: integer
+     *                      description: the duration of the video
+     *                      example: 100
+     *                  views:
+     *                      type: integer
+     *                      description: the views of the video
+     *                      example: 100000
+	 *       404:
+	 *         description: No videos found.
+	 *         content:
+	 *           application/json:
+     *              schema:
+     *                  properties:
+     *                      msg:
+     *                          type: string
+     *                          description: returned message.
+     *                          example: video not found
+     * 
+	 *       500:
+	 *         description: Internal error
+	 *         content:
+	 *           application/json:
+     *              schema:
+     *                  properties:
+     *                      errors:
+     *                          type: array
+     *                          items:
+     *                              example: errors
+     *                                          
+	 */
+const showComments = (req, res) => {
+	const id = req.params.id;
+
+    // query
+	const commentLimit = req.query.comment_limit | 10;
+
+    // find video from id
+	Comment.find({ _video_id: id })
+        // connect and populate relationships
+		.populate([
+			{
+				path: "_channel_id",
+				select: '_id username subscriber avatar'
+			},
+		])
+        .select('-__v')
+        .lean()
+		.then((comments) => {
+            // if video doesn't exist return 404
+			if (!comments)
+				res.status(404).json({
+					message: `Comments from Video ${id} not found!`,
+				});
+
+            parentComments = comments.filter(comment => typeof comment._parent_comment_id === 'undefined');
+            childComments = comments.filter(comment => typeof comment._parent_comment_id !== 'undefined');
+
+            childComments.forEach(child => {
+                const parentId = parentComments.findIndex(parent => parent._id.toString() === child._parent_comment_id.toString());
+
+                // create children array in parentComments
+                if(typeof parentComments[parentId]?.children === 'undefined') {
+                    parentComments[parentId].children = []; 
+                }
+
+                if(child._id.toString() === '656f1fea30fd843ccd9900e2') {
+                    console.log(child);
+                }
+
+                // push child comments into parent
+                parentComments[parentId].children.push(child._id);
+                // console.log(parentComments[parentId])
+            });
+
+            // console.log(parentComments.filter(parent => typeof parent.children !== 'undefined')[0].children)
+
+            // return video
+			res.status(200).json(parentComments);
+		})
+		.catch((err) => {
+			if (err.name === "CastError") {
+				console.error(err);
+				res.status(404).json({
+					message: `Comments from video ${id} not found!`,
 				});
 			} else {
 				console.error(err);
@@ -867,6 +1080,7 @@ const destroy = (req, res) => {
 module.exports = {
 	index,
 	show,
+    showComments,
 	create,
 	update,
 	destroy,

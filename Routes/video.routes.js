@@ -3,6 +3,7 @@ const router = express.Router();
 const {
 	index,
 	show,
+	showComments,
 	create,
 	update,
 	destroy,
@@ -14,6 +15,7 @@ const imageUpload = require("../config/imageUpload");
 router
 	.get("/", index)
 	.get("/:id", show)
+	.get('/:id/comments', showComments)
 	.post("/create", [loginRequired, imageUpload.single("thumbnail")], create)
 	.put("/:id/update", [loginRequired, imageUpload.none()], update)
 	.delete("/:id/delete", [loginRequired, imageUpload.none()], destroy);
