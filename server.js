@@ -11,10 +11,8 @@ const jwt = require("jsonwebtoken");
 const app = express();
 const port = 3000;
 
-app.use(express.json());
 app.use(cors());
-// app.set('view engine', 'html');
-// app.use(express.static(__dirname + '/views/'));
+app.use(express.json());
 
 const options = {
 	failOnErrors: true, // Whether or not to throw when parsing errors. Defaults to false.

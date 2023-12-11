@@ -29,20 +29,21 @@ const s3Storage = multers3({
 
 function validateFile(file, cb) {
     // define allowed extension
-    const fileExts = ['.png', '.jpg', '.jpeg', '.gif'];
+    // const fileExts = ['.png', '.jpg', '.jpeg', '.gif'];
 
-    // check uplodaded file extension
-    const isExt = fileExts.includes(
-        path.extname(file.originalname.toLowerCase())
-    );
+    // // check uplodaded file extension
+    // const isExt = fileExts.includes(
+    //     path.extname(file.originalname.toLowerCase())
+    // );
 
     // Mime type must be an image
     const isMimeType = file.mimetype.startsWith("image/");
 
-    if(isExt && isMimeType) {
+    if(isMimeType) {
         return cb(null, true); //no errors
     } else {
         // pass error msg to callback
+        console.log(file)
         cb('Error: File type not allowed!');
     }
 }
