@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const Comment = require("../Models/comment.model");
 require("dotenv").config();
 const deleteImage = require("../config/ImageDelete");
+const { ObjectId } = require("mongodb");
 
 // register new channel
 /**
@@ -347,10 +348,10 @@ const show = (req, res) => {
 		.populate([
 			{
 				path: "videos",
-				select: "_id title url tag thumbnail duration createdAt views",
+				select: "_id title url tag thumbnail duration createdAt updatedAt views",
 			},
 		])
-		.select("-password -__v -email -createdAt")
+		.select("-password -__v -email")
 		.then((channel) => {
 			if (!channel) {
 				return res.status(404).json({
@@ -362,6 +363,110 @@ const show = (req, res) => {
 
 			return res.status(200).json(channel);
 		});
+};
+
+const subscribed = async (req, res) => {
+	const id = req.params.id;
+
+    if(!Channel.exists({ _id: id })) {
+        res.status(404).json({
+            message: `Channel with ID ${id} doesn't exist!`
+        });
+    }
+
+	// find video from id
+	const channel = await Channel.findById(req.channel._id);
+
+    // const hasSubbed = channel.subscribed.findIndex(channelId => channelId === id);
+
+    // const isASub = hasSubbed !== -1 ? false : true; 
+    
+	return res.status(200).json(channel);
+
+};
+
+// Subscribe to a channel
+/**
+ * @openapi
+ * /api/channels/{id}/subscribe:
+ *   get:
+ *     tags:
+ *      - channels
+ *     summary: Increment or decrement subscriber value
+ *     description: Increment or decrement subscriber value based on the channel's ObjectID
+ *     parameters:
+ *          - in: path
+ *            name: id
+ *            type: string
+ *            description: The channel ObjectID
+ *            default: 653c303970f555b2245cf569
+ *     responses:
+ *       200:
+ *         description: Returns the channel with the same ObjectID.
+ *         content:
+ *           application/json:
+ *             schema:
+ *              type: object
+ *              properties:
+ *                  type:
+ *                      type: string
+ *                      description: specify if the subscriber value has been incremented/decremented.
+ *                      example: increment
+ *                  message:
+ *                      type: string
+ *                      description: successful response.
+ *                      example: The subscriber value has been incremented.
+ *       404:
+ *         description: No channel found.
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      msg:
+ *                          type: string
+ *                          description: returned message.
+ *                          example: channel not found
+ *
+ *       500:
+ *         description: Internal error
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      errors:
+ *                          type: array
+ *                          items:
+ *                              example: errors
+ *
+ */
+const subscribe = async (req, res) => {
+	const id = req.params.id;
+
+    if(!Channel.exists({ _id: id })) {
+        res.status(404).json({
+            message: `Channel with ID ${id} doesn't exist!`
+        });
+    }
+
+	// find video from id
+	const channel = await Channel.findById(req.channel._id);
+
+    const hasSubbed = channel.subscribed.findIndex(channelId => String(channelId) === id);
+
+    const incrementOrDecrementByOne = hasSubbed !== -1 ? -1 : 1; 
+    const pushOrPullSub = hasSubbed !== -1 ? { $pull: { subscribed: id } } : { $push: { subscribed: id } }
+
+    Channel.findByIdAndUpdate(req.channel._id, pushOrPullSub)
+    .then(channel => {
+        Channel.findByIdAndUpdate(id, { $inc: { subscribers: incrementOrDecrementByOne } })
+        .then(channel => {
+            res.status(200).json({
+                message: `Channel's subscription has been updated.`,
+                type: hasSubbed !== -1 ? 'decrement' : 'increment'
+            })
+        })
+    })
+
 };
 
 // update channel
@@ -609,4 +714,6 @@ module.exports = {
 	show,
 	update,
 	destroy,
+	subscribe,
+	subscribed
 };

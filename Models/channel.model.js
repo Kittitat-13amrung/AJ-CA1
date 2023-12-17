@@ -10,6 +10,11 @@ const channelSchema = new Schema({
     videos: [{ type: Schema.Types.ObjectId, ref: 'Video' }],
     about: { type: String },
     avatar: { type: String, default: faker.image.avatar()},
+    subscribed: [{ type: Schema.Types.ObjectId, ref: 'Channel', unique: true }],
+    liked: [{ type: Schema.Types.ObjectId, ref: 'Video', unique: true }],
+    disliked: [{ type: Schema.Types.ObjectId, ref: 'Video', unique: true }],
+    comment_liked: [{ type: Schema.Types.ObjectId, ref: 'Comment', unique: true }],
+    comment_disliked: [{ type: Schema.Types.ObjectId, ref: 'Comment', unique: true }],
     roles: [{ type: String, default: 'user', }]
 }, {
     timestamps: true

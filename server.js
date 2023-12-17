@@ -39,8 +39,8 @@ app.use("/public", express.static(__dirname + "/public/"));
 
 // login middleware
 app.use((req, res, next) => {
-	// array of path to check
-	const securePaths = ["update", "create", "delete"];
+	// array of paths to check
+	const securePaths = ["update", "create", "delete", "like", "dislike", "subscribe"];
 
 	// iterate current path by splitting it into array
 	let hasPath = false;

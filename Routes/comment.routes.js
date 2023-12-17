@@ -7,7 +7,9 @@ const {
     createCommentInVideo,
     createCommentInComment,
     update,
-    destroy
+    destroy,
+    likeComment,
+    dislikeComment
 } = require('../Controllers/comment.controller');
 
 const imageUpload = require("../config/imageUpload");
@@ -19,6 +21,8 @@ router
     .get('/', index)
     .get('/:id', show)
     .get('/:id/children', showChildComments)
+    .post('/:id/like', loginRequired, likeComment)
+    .post('/:id/dislike', loginRequired, dislikeComment)
     .post('/:commentId/create', [loginRequired, imageUpload.none()], createCommentInComment)
     .post('/video/:videoId/create', [loginRequired, imageUpload.none()], createCommentInVideo)
     .put('/:id/update', [loginRequired, imageUpload.none()], update)

@@ -1,5 +1,6 @@
 const Comment = require("../Models/comment.model");
 const Video = require("../Models/video.model");
+const Channel = require("../Models/channel.model");
 
 // show all comments
 /**
@@ -549,6 +550,173 @@ const showChildComments = async (req, res) => {
 			});
 	}
 };
+// Liking a comment
+/**
+ * @openapi
+ * /api/comments/{id}/like:
+ *   get:
+ *     tags:
+ *      - comments
+ *     summary: Increment or decrement like value
+ *     description: Increment or decrement like value based on the channel's ObjectID
+ *     parameters:
+ *          - in: path
+ *            name: id
+ *            type: string
+ *            description: The comment ObjectID
+ *            default: 653c303970f555b2245cf569
+ *     responses:
+ *       200:
+ *         description: Returns the comment with the same ObjectID.
+ *         content:
+ *           application/json:
+ *             schema:
+ *              type: object
+ *              properties:
+ *                  type:
+ *                      type: string
+ *                      description: specify if the like value has been incremented/decremented.
+ *                      example: increment
+ *                  message:
+ *                      type: string
+ *                      description: successful response.
+ *                      example: The like value has been incremented.
+ *       404:
+ *         description: No comment found.
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      msg:
+ *                          type: string
+ *                          description: returned message.
+ *                          example: comment not found
+ *
+ *       500:
+ *         description: Internal error
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      errors:
+ *                          type: array
+ *                          items:
+ *                              example: errors
+ *
+ */
+const likeComment = async (req, res) => {
+	const id = req.params.id;
+
+    if(!Comment.exists({ _id: id })) {
+        res.status(404).json({
+            message: `Comment with ID ${id} doesn't exist!`
+        });
+    }
+
+	// find comment from id
+	const channel = await Channel.findById(req.channel._id);
+
+    const hasLiked = channel.comment_liked.findIndex(commentId => String(commentId) === id);
+    const incrementOrDecrementByOne = hasLiked !== -1 ? -1 : 1; 
+    const pushOrPullLike = hasLiked !== -1 ? { $pull: { comment_liked: id } } : { $push: { comment_liked: id } }
+
+    Channel.findByIdAndUpdate(req.channel._id, pushOrPullLike)
+    .then(channel => {
+        Comment.findByIdAndUpdate(id, { $inc: { likes: incrementOrDecrementByOne } })
+        .then(comment => {
+            res.status(200).json({
+                message: `Comment's Like has been updated.`,
+                type: hasLiked !== -1 ? 'decrement' : 'increment'
+            })
+        })
+    })
+
+};
+
+// Disliking a comment
+/**
+ * @openapi
+ * /api/comments/{id}/dislike:
+ *   get:
+ *     tags:
+ *      - comments
+ *     summary: Increment or decrement dislike value
+ *     description: Increment or decrement dislike value based on the channel's ObjectID
+ *     parameters:
+ *          - in: path
+ *            name: id
+ *            type: string
+ *            description: The comment ObjectID
+ *            default: 653c303970f555b2245cf569
+ *     responses:
+ *       200:
+ *         description: Returns the comment with the same ObjectID.
+ *         content:
+ *           application/json:
+ *             schema:
+ *              type: object
+ *              properties:
+ *                  type:
+ *                      type: string
+ *                      description: specify if the dislike value has been incremented/decremented.
+ *                      example: increment
+ *                  message:
+ *                      type: string
+ *                      description: successful response.
+ *                      example: The dislike value has been incremented.
+ *       404:
+ *         description: No comment found.
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      msg:
+ *                          type: string
+ *                          description: returned message.
+ *                          example: comment not found
+ *
+ *       500:
+ *         description: Internal error
+ *         content:
+ *           application/json:
+ *              schema:
+ *                  properties:
+ *                      errors:
+ *                          type: array
+ *                          items:
+ *                              example: errors
+ *
+ */
+const dislikeComment = async (req, res) => {
+	const id = req.params.id;
+
+    if(!Comment.exists({ _id: id })) {
+        res.status(404).json({
+            message: `Comment with ID ${id} doesn't exist!`
+        });
+    }
+
+	// find comment from id
+	const channel = await Channel.findById(req.channel._id);
+
+    const hasDisliked = channel.comment_disliked.findIndex(commentId => String(commentId) === id);
+
+    const incrementOrDecrementByOne = hasDisliked !== -1 ? -1 : 1; 
+    const pushOrPullDislike = hasDisliked !== -1 ? { $pull: { comment_disliked: id } } : { $push: { comment_disliked: id } }
+
+    Channel.findByIdAndUpdate(req.channel._id, pushOrPullDislike)
+    .then(channel => {
+        Comment.findByIdAndUpdate(id, { $inc: { dislikes: incrementOrDecrementByOne } })
+        .then(comment => {
+            res.status(200).json({
+                message: `Comment's Dislike has been updated.`,
+                type: hasDisliked !== -1 ? 'decrement' : 'increment'
+            })
+        })
+    })
+
+
+};
 
 // create comment in a video
 /**
@@ -1012,4 +1180,6 @@ module.exports = {
 	createCommentInComment,
 	update,
 	destroy,
+	likeComment,
+	dislikeComment
 };
